@@ -35,3 +35,11 @@ coverage/
 .vscode/
 *.sublime-workspace
 *.sublime-project
+
+# Filter out VScode working files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
