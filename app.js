@@ -1,46 +1,49 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+const express = require('express');
+const path = require('path');
+const logger = require('morgan');
+const cookieParser = require('cookie-parser');
+const hbs = require('hbs');
 
-//module2 changes
-var indexRouter = require('./app_server/routes/index');
-var usersRouter = require('./app_server/routes/users');
-var travelRouter = require('./app_server/routes/travel');
-var handlebars = require('hbs');
-var app = express();
+// DB registers models:
+require('./app_api/models/db');
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
-handlebars.registerPartials(__dirname + '/app_server/views/partials');
+// Routers
+const apiRouter    = require('./app_api/routes');
+const indexRouter  = require('./app_server/routes/index');
+const travelRouter = require('./app_server/routes/travel');
 
+const app = express();
+
+// view engine (HBS) + partials + static
+app.set('views', path.join(__dirname, 'app_server', 'views'));
+app.set('view engine', 'hbs');
+hbs.registerPartials(path.join(__dirname, 'app_server', 'views', 'partials'));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// std middleware
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
-//module2 changes
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
-app.use('/travel', travelRouter);
+// ROUTES (order matters)
+app.use('/api', apiRouter);       // 1) API first
+app.use('/travel', travelRouter); // 2) /travel page (module 2+)
+app.use('/', indexRouter);        // 3) home (can redirect to /travel)
 
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
-});
+// 404
+app.use((req, res, next) => next(require('http-errors')(404)));
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+// unified error handler (won’t crash on undefined url; JSON for /api)
+app.use((err, req, res, next) => {
+  const status = err.status || 500;
+  const url = (req && req.originalUrl) ? req.originalUrl : '';
+  if (url.startsWith('/api/')) {
+    return res.status(status).json({ message: err.message || 'Server error' });
+  }
+  res.status(status);
+  res.render('error', { message: err.message, status,
+    error: req.app.get('env') === 'development' ? err : {} });
 });
 
 module.exports = app;
