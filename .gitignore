@@ -36,6 +36,9 @@ coverage/
 *.sublime-workspace
 *.sublime-project
 
+# dotenv environment variable files
+.env
+
 # Filter out VScode working files
 .vscode/*
 !.vscode/settings.json

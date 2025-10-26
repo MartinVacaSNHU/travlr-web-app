@@ -1,8 +1,13 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const logger = require('morgan');
 const cookieParser = require('cookie-parser');
 const hbs = require('hbs');
+
+//Wire in authentication module
+var passport = require('passport')
+require('./app_api/config/passport')
 
 // DB registers models:
 require('./app_api/models/db');
@@ -25,11 +30,28 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(passport.initialize());
+
+//Enable CORS for development only
+app.use('/api', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:4200');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  next();
+});
 
 // ROUTES (order matters)
-app.use('/api', apiRouter);       // 1) API first
-app.use('/travel', travelRouter); // 2) /travel page (module 2+)
-app.use('/', indexRouter);        // 3) home (can redirect to /travel)
+app.use('/api', apiRouter);
+app.use('/travel', travelRouter);
+app.use('/', indexRouter);
+
+// Catch UnauthorizedError from express-jwt and return 401 JSON
+app.use((err, req, res, next) => {
+  if (err && err.name === 'UnauthorizedError') {
+    return res.status(401).json({ message: err.name + ': ' + err.message });
+  }
+  return next(err);
+});
 
 // 404
 app.use((req, res, next) => next(require('http-errors')(404)));

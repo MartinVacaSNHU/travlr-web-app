@@ -4,6 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import { TripCardComponent } from "../trip-card/trip-card";
 import { Trip } from '../models/trip';
 import { TripData } from '../services/trip-data';
+import { Authentication } from '../services/authentication';
 
 @Component({
   selector: 'app-trip-listing',
@@ -11,41 +12,44 @@ import { TripData } from '../services/trip-data';
   imports: [CommonModule, RouterModule, TripCardComponent],
   templateUrl: './trip-listing.html'
 })
-
 export class TripListing implements OnInit {
-
   trips!: Trip[];
   message: string = '';
 
-  constructor(private tripData: TripData,
-    private router: Router
+  constructor(
+    private tripData: TripData,
+    private router: Router,
+    private authentication: Authentication
   ) {
-    console.log('trip-listing consructor');
+    console.log('TripListing constructor');
+  }
+
+  ngOnInit(): void {
+    console.log('ngOnInit');
+    this.loadTrips();
   }
 
   public addTrip(): void {
     this.router.navigate(['add-trip']);
   }
 
-  private getStuff(): void {
+  public isLoggedIn(): boolean {
+    return this.authentication.isLoggedIn();
+  }
+
+  private loadTrips(): void {
     this.tripData.getTrips()
       .subscribe({
-        next: (value: any) => {
-          this.trips = value;
-          if(value.length > 0) {
-            this.message = 'There are ' + value.length + ' trips available.';
-          } else {
-            this.message = 'There were no trips retireved from the database.';
-          }
+        next: (trips: Trip[]) => {
+          this.trips = trips;
+          this.message = trips.length > 0
+            ? `There are ${trips.length} trips available.`
+            : 'There were no trips retrieved from the database.';
           console.log(this.message);
         },
         error: (error: any) => {
-          console.log('Error: ') + error;
+          console.error('Error:', error);
         }
-      })
-  }
-  ngOnInit(): void {
-    console.log('ngOnInit');
-    this.getStuff();
+      });
   }
 }
